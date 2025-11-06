@@ -1,0 +1,101 @@
+import { cn } from "@/lib/util";
+import { Edit, Eye, Trash2 } from "lucide-react";
+import * as React from "react";
+export interface ButtonProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "default" | "outline" | "hover" | "primary" | "filled";
+  size?: "default" | "sm" | "lg";
+  expand?: boolean;
+}
+
+const buttonVariants = {
+  default: "text-white hover:bg-indigo-950 hover:opacity-90",
+  hover: "text-white hover:text-slate-300",
+  outline: "border border-input bg-none hover:bg-gray-800",
+  filled: "bg-indigo-600 hover:bg-indigo-500 text-white font-medium",
+  primary:
+    "bg-white text-indigo-600 border border-indigo-500 hover:text-indigo-700 hover:border-indigo-700 hover:bg-indigo-50",
+};
+
+const buttonSizes = {
+  default: "h-10 px-2 py-2",
+  sm: "h-9 px-3 rounded-md",
+  lg: "h-10 px-6 rounded-md",
+};
+
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  (
+    {
+      className,
+      variant = "default",
+      size = "default",
+      expand = false,
+      children,
+      ...props
+    },
+    ref
+  ) => (
+    <button
+      className={cn(
+        "inline-flex cursor-pointer items-center disabled justify-center rounded-md text-sm font-medium  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background",
+        buttonVariants[variant],
+        buttonSizes[size],
+        expand && "w-full",
+        props.disabled && "cursor-not-allowed",
+        className
+      )}
+      ref={ref}
+      {...props}
+    >
+      {children}
+    </button>
+  )
+);
+
+Button.displayName = "Button";
+export function ViewIconButton({
+  onClick,
+}: {
+  onClick: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="p-2 rounded-md text-green-600 hover:bg-green-50 transition cursor-pointer"
+      title="View Details"
+    >
+      <Eye size={16} />
+    </button>
+  );
+}
+export function EditIconButton({
+  onClick,
+}: {
+  onClick: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="p-2 rounded-md text-blue-600 hover:bg-blue-100 transition cursor-pointer"
+      title="Edit"
+    >
+      <Edit size={16} />
+    </button>
+  );
+}
+
+export function DeleteIconButton({
+  onClick,
+}: {
+  onClick: (e: React.MouseEvent) => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="p-2 rounded-md text-red-600 hover:bg-red-50 transition cursor-pointer"
+      title="Delete"
+    >
+      <Trash2 size={16} />
+    </button>
+  );
+}
