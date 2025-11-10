@@ -259,7 +259,7 @@ export default function UpdateWordPage() {
       console.log(formData);
       await vocabularyService.updateWord(wordId?.toString() ?? "", formData);
       toast.success("Cập nhật từ thành công!");
-      // router.back();
+      router.back();
     } catch (err) {
       console.error(err);
       toast.error("Cập nhật thất bại!");

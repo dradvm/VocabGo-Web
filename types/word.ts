@@ -12,6 +12,7 @@ export class WordPos {
   levels: Level = new Level();
   pos_tags: PosTag = new PosTag();
 }
+
 export class Level {
   level_name!: string;
 }

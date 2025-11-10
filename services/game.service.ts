@@ -1,3 +1,4 @@
+import { LessonQuestion } from "@/types/game";
 import axiosInstance, { createAxios } from "./http";
 export const gameService = {
   getGameLevels: () => axiosInstance.get("/game/gameLevels"),
@@ -15,8 +16,8 @@ export const gameService = {
     axiosInstance.patch("/game/gameLevels/order", {
       gameLevelIds: gameLevelIds ?? [],
     }),
-  getStages: (gameLevelId: string) =>
-    axiosInstance.get(`/game/gameLevels/${gameLevelId}/stages`),
+  getAllStages: (gameLevelId: string) =>
+    axiosInstance.get(`/game/gameLevels/${gameLevelId}/stages/all`),
   addStage: (
     gameLevelId: string,
     stage: { stageName: string },
@@ -37,7 +38,17 @@ export const gameService = {
       ...stage,
       wordPosIds,
     }),
-
+  updateStageActive: (
+    gameLevelId: string,
+    stageId: string,
+    isActive: boolean
+  ) =>
+    axiosInstance.patch(
+      `/game/gameLevels/${gameLevelId}/stages/${stageId}/active`,
+      {
+        isActive,
+      }
+    ),
   deleteStage: (gameLevelId: string, stageId: string) =>
     axiosInstance.delete(`/game/gameLevels/${gameLevelId}/stages/${stageId}`),
 
@@ -45,4 +56,35 @@ export const gameService = {
     axiosInstance.patch(`/game/gameLevels/${gameLevelId}/stages/order`, {
       stageIds: stageIds ?? [],
     }),
+
+  getLessonTypes: () => axiosInstance.get(`/game/lessons/type`),
+  getAllLessons: (stageId: string) =>
+    axiosInstance.get(`/game/lessons/${stageId}`),
+  addLesson: (
+    stageId: string,
+    lessonName: string,
+    lessonTypeId: string,
+    lessonReward: number,
+    lessonQuestions: LessonQuestion[]
+  ) =>
+    axiosInstance.post(`/game/lessons/${stageId}`, {
+      lessonName,
+      lessonTypeId,
+      lessonReward,
+      questions: lessonQuestions.map((lessonQuestion) => ({
+        questionId: lessonQuestion.question_id,
+        questionCount: lessonQuestion.question_count,
+      })),
+    }),
+  updateLesson: (stageId: string, lessonId: string, data: any) =>
+    axiosInstance.put(`/game/lessons/${stageId}/${lessonId}`, data),
+  deleteLesson: (lessonId: string) =>
+    axiosInstance.delete(`/game/lessons/${lessonId}`),
+  updateLessonActive: (stageId: string, lessonId: string, isActive: boolean) =>
+    axiosInstance.patch(`/game/lessons/${stageId}/${lessonId}/active`, {
+      isActive,
+    }),
+  updateLessonOrder: (stageId: string, lessonIds: string[]) =>
+    axiosInstance.patch(`/game/lessons/${stageId}/order`, { lessonIds }),
+  getAllQuestions: () => axiosInstance.get("/game/questions"),
 };

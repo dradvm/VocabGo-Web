@@ -10,6 +10,7 @@ import {
 } from "@dnd-kit/core";
 import {
   arrayMove,
+  rectSortingStrategy,
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
@@ -17,10 +18,15 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Card, CardContent } from "@/components/ui/card";
 import { Typography, Box, Switch } from "@mui/material";
-import { Button, DeleteIconButton, EditIconButton } from "@/components/Button";
+import {
+  Button,
+  DeleteIconButton,
+  EditIconButton,
+  ViewIconButton,
+} from "@/components/Button";
 import toast from "react-hot-toast";
 import { gameService } from "@/services/game.service";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { vocabularyService } from "@/services/vocabulary.service";
 import { Word, WordPos } from "@/types/word";
 
@@ -33,6 +39,7 @@ interface Stage {
 }
 
 export default function StagesPage() {
+  const router = useRouter();
   const { gameLevelId } = useParams();
   const [stages, setStages] = useState<Stage[]>([]);
   const [open, setOpen] = useState(false);
@@ -45,7 +52,6 @@ export default function StagesPage() {
   const [selectedWord, setSelectedWord] = useState<Word | null>(null);
   const [selectedWordPos, setSelectedWordPos] = useState<WordPos[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [loadingPos, setLoadingPos] = useState(false);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
@@ -53,7 +59,7 @@ export default function StagesPage() {
   const fetchData = () => {
     if (gameLevelId) {
       gameService
-        .getStages(gameLevelId.toString() ?? "")
+        .getAllStages(gameLevelId.toString() ?? "")
         .then((res) => setStages(res.data))
         .catch((err) => console.log(err));
     }
@@ -172,13 +178,15 @@ export default function StagesPage() {
   };
 
   const toggleActive = (stage: Stage) => {
-    // Giả sử API updateStage nhận isActive
-    // gameService
-    //   .updateStage(gameLevelId ? gameLevelId.toString() : "", stage.stage_id, {
-    //     isActive: !stage.is_active,
-    //   })
-    //   .then(() => fetchData())
-    //   .catch((err) => console.log(err));
+    stage.is_active = !stage.is_active;
+    gameService
+      .updateStageActive(
+        gameLevelId ? gameLevelId.toString() : "",
+        stage.stage_id,
+        stage.is_active
+      )
+      .then(() => fetchData())
+      .catch((err) => console.log(err));
   };
 
   const handleSelectWord = (word: Word) => {
@@ -186,8 +194,10 @@ export default function StagesPage() {
   };
   const handleSelectWordPos = (word: string, wordPos: WordPos) => {
     wordPos.word = word;
-    if (selectedWordPos.includes(wordPos)) {
-      setSelectedWordPos(selectedWordPos.filter((ws) => ws != wordPos));
+    if (selectedWordPos.some((ws) => ws.word_pos_id == wordPos.word_pos_id)) {
+      setSelectedWordPos(
+        selectedWordPos.filter((ws) => ws.word_pos_id != wordPos.word_pos_id)
+      );
     } else {
       setSelectedWordPos((prev) => [...prev, wordPos]);
     }
@@ -268,9 +278,9 @@ export default function StagesPage() {
       >
         <SortableContext
           items={stages.map((s) => s.stage_id)}
-          strategy={verticalListSortingStrategy}
+          strategy={rectSortingStrategy}
         >
-          <div className="flex flex-col gap-3">
+          <div className="grid grid-cols-3 gap-3">
             {stages.map((stage) => (
               <SortableStage
                 key={stage.stage_id}
@@ -278,6 +288,7 @@ export default function StagesPage() {
                 onEdit={() => handleEdit(stage)}
                 onDelete={() => setConfirmDeleteId(stage.stage_id)}
                 onToggleActive={() => toggleActive(stage)}
+                onView={() => router.push(`./${gameLevelId}/${stage.stage_id}`)}
               />
             ))}
           </div>
@@ -349,9 +360,7 @@ export default function StagesPage() {
                   Word Part Of Speech
                 </h4>
 
-                {loadingPos ? (
-                  <p className="text-gray-400 text-sm italic">Loading...</p>
-                ) : selectedWord ? (
+                {selectedWord ? (
                   selectedWord.word_pos.length > 0 ? (
                     <div className="space-y-2 overflow-y-auto h-64">
                       {selectedWord.word_pos.map((pos: WordPos) => (
@@ -429,11 +438,7 @@ export default function StagesPage() {
 
             {/* Footer Buttons */}
             <div className="flex justify-end gap-2 mt-6">
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setOpen(false)}
-              >
+              <Button variant="primary" size="sm" onClick={handleCloseModal}>
                 Cancel
               </Button>
               <Button
@@ -492,11 +497,13 @@ function SortableStage({
   onEdit,
   onDelete,
   onToggleActive,
+  onView,
 }: {
   stage: Stage;
   onEdit: () => void;
   onDelete: () => void;
   onToggleActive: () => void;
+  onView: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: stage.stage_id });
@@ -512,30 +519,38 @@ function SortableStage({
       style={style}
       {...attributes}
       {...listeners}
-      className="cursor-grab select-none shadow-sm hover:shadow-md transition-shadow rounded-md"
+      className="cursor-grab select-none shadow-sm hover:shadow-md transition-all rounded-xl p-4 flex flex-col bg-white"
     >
-      <CardContent className="py-3 px-5">
-        <Box
-          display="flex"
-          alignItems="center"
-          justifyContent="space-between"
-          gap={2}
+      <div className="flex justify-between items-center">
+        {/* Stage name */}
+        <Typography
+          variant="subtitle1"
+          fontWeight="bold"
+          className="text-gray-800 mb-2 truncate"
         >
-          <Typography variant="subtitle1" fontWeight="bold">
-            {stage.stage_name}
-          </Typography>
+          {stage.stage_name}
+        </Typography>
 
-          <Box display="flex" alignItems="center" gap={2}>
-            <Switch
-              checked={stage.is_active}
-              onChange={onToggleActive}
-              color="success"
-            />
-            <EditIconButton onClick={onEdit} />
-            <DeleteIconButton onClick={onDelete} />
-          </Box>
-        </Box>
-      </CardContent>
+        {/* Switch */}
+        <Switch
+          checked={stage.is_active}
+          onChange={onToggleActive}
+          sx={{
+            "& .MuiSwitch-switchBase.Mui-checked": {
+              color: "#4f46e5", // indigo-600
+            },
+            "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+              backgroundColor: "#4f46e5",
+            },
+          }}
+        />
+      </div>
+      {/* Action buttons */}
+      <Box display="flex" justifyContent="end" alignItems="center" gap={1.5}>
+        <ViewIconButton onClick={onView} />
+        <EditIconButton onClick={onEdit} />
+        <DeleteIconButton onClick={onDelete} />
+      </Box>
     </Card>
   );
 }
