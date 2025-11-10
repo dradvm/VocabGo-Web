@@ -60,7 +60,7 @@ export default function ManagerLayout({
             Dashboard
           </Link>
 
-          <Link
+          {/* <Link
             href="/manager/users"
             className={`flex items-center px-3 py-2 rounded-lg transition ${
               isActive("/manager/users")
@@ -70,7 +70,7 @@ export default function ManagerLayout({
           >
             <Users className="w-5 h-5 mr-3" />
             Users
-          </Link>
+          </Link> */}
 
           <Link
             href="/manager/vocabulary"
@@ -96,31 +96,7 @@ export default function ManagerLayout({
             Learning Path
           </Link>
 
-          <Link
-            href="/manager/lessons"
-            className={`flex items-center px-3 py-2 rounded-lg transition ${
-              isActive("/manager/lessons")
-                ? "bg-indigo-100 text-indigo-700 font-medium"
-                : "hover:bg-indigo-50 hover:text-indigo-600"
-            }`}
-          >
-            <FileText className="w-5 h-5 mr-3" />
-            Lessons
-          </Link>
-
-          <Link
-            href="/manager/exercises"
-            className={`flex items-center px-3 py-2 rounded-lg transition ${
-              isActive("/manager/exercises")
-                ? "bg-indigo-100 text-indigo-700 font-medium"
-                : "hover:bg-indigo-50 hover:text-indigo-600"
-            }`}
-          >
-            <ClipboardCheck className="w-5 h-5 mr-3" />
-            Exercises
-          </Link>
-
-          <Link
+          {/* <Link
             href="/manager/reports"
             className={`flex items-center px-3 py-2 rounded-lg transition ${
               isActive("/manager/reports")
@@ -130,7 +106,7 @@ export default function ManagerLayout({
           >
             <BarChart3 className="w-5 h-5 mr-3" />
             Reports
-          </Link>
+          </Link> */}
         </nav>
 
         {/* Footer Sidebar */}
