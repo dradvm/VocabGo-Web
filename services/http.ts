@@ -37,7 +37,6 @@ export const createAxios = (
     headers: {
       "Content-Type": contentType,
     },
-    withCredentials: true, // gửi cookie cho web
   });
 
   if (isInterceptor) {
