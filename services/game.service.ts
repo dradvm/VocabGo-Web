@@ -76,14 +76,24 @@ export const gameService = {
         questionCount: lessonQuestion.question_count,
       })),
     }),
-  updateLesson: (stageId: string, lessonId: string, data: any) =>
-    axiosInstance.put(`/game/lessons/${stageId}/${lessonId}`, data),
+  updateLesson: (
+    lessonId: string,
+    lessonName: string,
+    lessonTypeId: string,
+    lessonReward: number,
+    lessonQuestions: LessonQuestion[]
+  ) =>
+    axiosInstance.patch(`/game/lessons/${lessonId}`, {
+      lessonName,
+      lessonTypeId,
+      lessonReward,
+      questions: lessonQuestions.map((lessonQuestion) => ({
+        questionId: lessonQuestion.question_id,
+        questionCount: lessonQuestion.question_count,
+      })),
+    }),
   deleteLesson: (lessonId: string) =>
     axiosInstance.delete(`/game/lessons/${lessonId}`),
-  updateLessonActive: (stageId: string, lessonId: string, isActive: boolean) =>
-    axiosInstance.patch(`/game/lessons/${stageId}/${lessonId}/active`, {
-      isActive,
-    }),
   updateLessonOrder: (stageId: string, lessonIds: string[]) =>
     axiosInstance.patch(`/game/lessons/${stageId}/order`, { lessonIds }),
   getAllQuestions: () => axiosInstance.get("/game/questions"),

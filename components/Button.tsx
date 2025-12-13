@@ -92,7 +92,7 @@ export function DeleteIconButton({
   return (
     <button
       onClick={onClick}
-      className="p-2 rounded-md text-red-600 hover:bg-red-50 transition cursor-pointer"
+      className="p-2 rounded-md text-red-600 hover:bg-red-100 transition cursor-pointer"
       title="Delete"
     >
       <Trash2 size={16} />

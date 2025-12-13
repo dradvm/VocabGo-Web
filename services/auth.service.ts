@@ -7,5 +7,8 @@ export const authService = {
       username,
       password,
     }),
-  test: async () => axiosInstance.get("/vocabulary/test"),
+  getUsers: async (page = 1, limit = 10, search = "") =>
+    axiosInstance.get("/auth/users", { params: { page, limit, search } }),
+  toggleBan: async (userId: string) =>
+    axiosInstance.patch(`/auth/toggleStatus/${userId}`),
 };

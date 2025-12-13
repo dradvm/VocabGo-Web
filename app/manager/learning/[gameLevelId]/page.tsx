@@ -29,8 +29,22 @@ import { gameService } from "@/services/game.service";
 import { useParams, useRouter } from "next/navigation";
 import { vocabularyService } from "@/services/vocabulary.service";
 import { Word, WordPos } from "@/types/word";
-
-interface Stage {
+import {
+  Tooltip,
+  TooltipProvider,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { X } from "lucide-react";
+import { useWordPosStore } from "@/store/useWordPosStore";
+export interface Stage {
   stage_id: string;
   stage_name: string;
   stage_order: number;
@@ -49,9 +63,21 @@ export default function StagesPage() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [words, setWords] = useState<Word[]>([]);
+  const isFromState = useWordPosStore((state) => state.isFromStage);
+  const setIsFromStage = useWordPosStore((state) => state.setIsFromStage);
   const [selectedWord, setSelectedWord] = useState<Word | null>(null);
-  const [selectedWordPos, setSelectedWordPos] = useState<WordPos[]>([]);
+  const selectedWordPos = useWordPosStore((state) => state.selectedWordPos);
+  const setSelectedWordPos = useWordPosStore(
+    (state) => state.setSelectedWordPos
+  );
+  const isEdit = useWordPosStore((state) => state.isEdit);
+  const setIsEdit = useWordPosStore((state) => state.setIsEdit);
   const [searchTerm, setSearchTerm] = useState("");
+  const [categoriesOptions, setCategoriesOptions] = useState<
+    { category_id: string; category_name: string }[]
+  >([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
   );
@@ -65,11 +91,12 @@ export default function StagesPage() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
+  const handlePosChange = (value: string) => {
+    setCategories((prev) => [...prev, value]);
+    setSelectedCategory("");
+  };
   const handleCloseModal = () => {
+    setEditingStage(null);
     setOpen(false);
     setSearchTerm("");
     setWords([]);
@@ -110,6 +137,7 @@ export default function StagesPage() {
     setEditingStage(null);
     setStageName("");
     setOpen(true);
+    setCategories([]);
   };
 
   const handleEdit = (stage: Stage) => {
@@ -119,6 +147,7 @@ export default function StagesPage() {
     setEditingStage(stage);
     setStageName(stage.stage_name);
     setOpen(true);
+    setCategories([]);
   };
 
   const handleSave = () => {
@@ -131,6 +160,12 @@ export default function StagesPage() {
         "Please select at least one part of speech from the 5 words.",
         { position: "top-right" }
       );
+      return;
+    }
+    if (selectedWordPos.some((ws) => ws.word_example.length == 0)) {
+      toast.error("Please part of speech that have at least 1 example", {
+        position: "top-right",
+      });
       return;
     }
     setIsSaving(true);
@@ -192,25 +227,28 @@ export default function StagesPage() {
   const handleSelectWord = (word: Word) => {
     setSelectedWord(word);
   };
-  const handleSelectWordPos = (word: string, wordPos: WordPos) => {
-    wordPos.word = word;
+  const handleSelectWordPos = (word: Word, wordPos: WordPos) => {
+    wordPos.word_id = word.word_id;
+    wordPos.word = word.word;
     if (selectedWordPos.some((ws) => ws.word_pos_id == wordPos.word_pos_id)) {
       setSelectedWordPos(
         selectedWordPos.filter((ws) => ws.word_pos_id != wordPos.word_pos_id)
       );
     } else {
-      setSelectedWordPos((prev) => [...prev, wordPos]);
+      setSelectedWordPos([...selectedWordPos, wordPos]);
     }
   };
   const handleRemoveWordPos = (wordPos: WordPos) => {
     setSelectedWordPos(selectedWordPos.filter((ws) => ws != wordPos));
   };
+  const handleRemoveCategory = (categoriesId: string) => {
+    setCategories((prev) => prev.filter((item) => item != categoriesId));
+  };
   useEffect(() => {
-    if (searchTerm.trim()) {
+    if (searchTerm.trim() || categories.length > 0) {
       vocabularyService
-        .getWords(0, 100, searchTerm)
+        .getWords(0, 100, searchTerm, categories)
         .then((res) => {
-          console.log(res.data.data);
           setWords(res.data.data);
         })
         .catch((err) => console.log(err));
@@ -218,7 +256,26 @@ export default function StagesPage() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setWords([]);
     }
-  }, [searchTerm]);
+  }, [searchTerm, categories]);
+
+  useEffect(() => {
+    if (isFromState) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOpen(isFromState);
+      setIsFromStage(false);
+    }
+    if (isEdit) {
+      setEditingStage(isEdit);
+      setStageName(isEdit.stage_name);
+    }
+    fetchData();
+    vocabularyService
+      .getCategories()
+      .then((res) => {
+        setCategoriesOptions(res.data);
+      })
+      .catch((err) => console.log(err));
+  }, []);
 
   useEffect(() => {
     if (editingStage) {
@@ -228,18 +285,6 @@ export default function StagesPage() {
         )
         .then((res) => {
           setSelectedWordPos(
-            res.data
-              .flatMap((word: Word) => {
-                word.word_pos.forEach((wp: WordPos) => (wp.word = word.word));
-                return word.word_pos;
-              })
-              .filter((ws: WordPos) =>
-                editingStage.stage_word.some(
-                  (sw) => sw.word_pos_id === ws.word_pos_id
-                )
-              )
-          );
-          console.log(
             res.data
               .flatMap((word: Word) => {
                 word.word_pos.forEach((wp: WordPos) => (wp.word = word.word));
@@ -298,7 +343,7 @@ export default function StagesPage() {
       {/* 🔹 Modal thêm/sửa Stage */}
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white px-8 py-6 rounded-2xl shadow-xl w-[1000px] ">
+          <div className="bg-white px-8 py-6 rounded-2xl shadow-xl w-3/4 ">
             <h3 className="text-lg font-semibold mb-4 text-gray-800">
               {editingStage ? "Edit Stage" : "Add New Stage"}
             </h3>
@@ -312,7 +357,64 @@ export default function StagesPage() {
               className="border border-gray-300 rounded-lg px-3 py-2 w-full text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-6"
             />
             {/* 3 Columns */}
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
+              <div className="border border-gray-200 rounded-lg p-3 flex flex-col">
+                <h4 className="font-semibold text-gray-700 mb-2 text-sm">
+                  Categories
+                </h4>
+                <Select
+                  value={selectedCategory}
+                  onValueChange={(value) => handlePosChange(value)}
+                >
+                  <SelectTrigger className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <SelectValue placeholder="Select category">
+                      Select category
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoriesOptions
+                      .filter((cat) => !categories.includes(cat.category_id))
+                      .map((cat) => (
+                        <SelectItem
+                          key={cat.category_id}
+                          value={cat.category_id}
+                        >
+                          {cat.category_name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+
+                {/* Selected chips */}
+                {categories.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {categories.map((id) => {
+                      const cat = categoriesOptions.find(
+                        (c) => c.category_id === id
+                      );
+                      if (!cat) return null;
+                      return (
+                        <div
+                          key={id}
+                          className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-indigo-400 
+                  text-indigo-600 text-sm"
+                        >
+                          <span>{cat.category_name}</span>
+                          <button
+                            onClick={() =>
+                              handleRemoveCategory(cat.category_id)
+                            }
+                            className="text-indigo-400 hover:text-red-500 transition cursor-pointer"
+                            type="button"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
               {/* ========== COLUMN 1: WORDS ========== */}
               <div className="border border-gray-200 rounded-lg p-3 flex flex-col">
                 <h4 className="font-semibold text-gray-700 mb-2 text-sm">
@@ -364,27 +466,50 @@ export default function StagesPage() {
                   selectedWord.word_pos.length > 0 ? (
                     <div className="space-y-2 overflow-y-auto h-64">
                       {selectedWord.word_pos.map((pos: WordPos) => (
-                        <div
-                          key={pos.word_pos_id}
-                          onClick={() =>
-                            handleSelectWordPos(selectedWord.word, pos)
-                          }
-                          className={`px-3 py-2 rounded-lg cursor-pointer text-sm border flex justify-between items-center ${
-                            selectedWordPos.some(
-                              (p: WordPos) => p.word_pos_id === pos.word_pos_id
-                            )
-                              ? "bg-green-100 text-green-700 border-green-300"
-                              : "hover:bg-gray-50 text-gray-700 border-gray-200"
-                          }`}
-                        >
-                          <div className="flex-1">{selectedWord.word}</div>
-                          <div className="w-16 text-center">
-                            {pos.pos_tags.pos_tag}
-                          </div>
-                          <div className="w-20 text-center">
-                            {pos.levels.level_name}
-                          </div>
-                        </div>
+                        <TooltipProvider key={pos.word_pos_id}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div
+                                key={pos.word_pos_id}
+                                onClick={() =>
+                                  handleSelectWordPos(selectedWord, pos)
+                                }
+                                className={`px-3 py-2 rounded-lg cursor-pointer text-sm border flex justify-between items-center ${
+                                  selectedWordPos.some(
+                                    (p: WordPos) =>
+                                      p.word_pos_id === pos.word_pos_id
+                                  )
+                                    ? "bg-green-100 text-green-700 border-green-300"
+                                    : "hover:bg-gray-50 text-gray-700 border-gray-200"
+                                }`}
+                              >
+                                <div className="flex-1">
+                                  {selectedWord.word}
+                                </div>
+                                <div className="w-16 text-center">
+                                  {pos.pos_tags.pos_tag}
+                                </div>
+                                <div className="w-20 text-center">
+                                  {pos.levels.level_name}
+                                </div>
+                                <EditIconButton
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    setIsFromStage(true);
+                                    setIsEdit(editingStage);
+                                    router.push(
+                                      `/manager/vocabulary/${selectedWord.word_id}`
+                                    );
+                                  }}
+                                />
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {`${pos.word_example.length} Example`}
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       ))}
                     </div>
                   ) : (
@@ -408,24 +533,34 @@ export default function StagesPage() {
                 <div className="space-y-2 overflow-y-auto h-78">
                   {selectedWordPos.length > 0 ? (
                     selectedWordPos.map((pos) => (
-                      <div
-                        key={pos.word_pos_id}
-                        className="flex justify-between items-center border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >
-                        <div className="flex-1">{pos.word}</div>
-                        <div className="w-16 text-center">
-                          {pos.pos_tags.pos_tag}
-                        </div>
-                        <div className="w-20 text-center">
-                          {pos.levels.level_name}
-                        </div>
-                        <button
-                          onClick={() => handleRemoveWordPos(pos)}
-                          className="text-red-500 text-xs ml-2 hover:font-bold cursor-pointer"
-                        >
-                          ✕
-                        </button>
-                      </div>
+                      <TooltipProvider key={pos.word_pos_id}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div
+                              key={pos.word_pos_id}
+                              className="flex justify-between items-center border border-gray-200 bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                              <div className="flex-1">{pos.word}</div>
+                              <div className="w-16 text-center">
+                                {pos.pos_tags.pos_tag}
+                              </div>
+                              <div className="w-20 text-center">
+                                {pos.levels.level_name}
+                              </div>
+                              <DeleteIconButton
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  handleRemoveWordPos(pos);
+                                }}
+                              />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {`${pos.word_example.length} Example`}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     ))
                   ) : (
                     <p className="text-gray-400 text-sm italic">

@@ -135,6 +135,7 @@ export default function LessonPage() {
 
   // ---------- HANDLERS ----------
   const handleOpenAdd = () => {
+    setLesson(null);
     setLessonName("");
     setLessonQuestions([]);
     setOpen(true);
@@ -142,10 +143,12 @@ export default function LessonPage() {
   const handleOpenUpdate = (lesson: Lesson) => {
     setLessonName(lesson.lesson_name);
     setLessonQuestions(lesson.lesson_question);
+    setLesson(lesson);
     setOpen(true);
   };
   const handleCloseModal = () => {
     setOpen(false);
+    setLesson(null);
   };
 
   const handleAddQuestion = () => {
@@ -193,22 +196,46 @@ export default function LessonPage() {
       return;
     }
     setIsSaving(true);
-    console.log(gameType);
-    gameService
-      .addLesson(
-        stageId?.toString() ?? "",
-        lessonName,
-        gameType?.lesson_type_id ?? "",
-        lessonReward,
-        lessonQuestions
-      )
-      .then(() => {
-        fetchData();
-        setOpen(false);
-        setIsSaving(false);
-      })
-      .catch((err) => console.log(err));
-  }, [gameType, lessonName, lessonQuestions, lessonReward, fetchData, stageId]);
+    if (lesson != null) {
+      gameService
+        .updateLesson(
+          lesson.lesson_id,
+          lessonName,
+          gameType?.lesson_type_id ?? "",
+          lessonReward,
+          lessonQuestions
+        )
+        .then(() => {
+          fetchData();
+          setOpen(false);
+          setIsSaving(false);
+        })
+        .catch((err) => console.log(err));
+    } else {
+      gameService
+        .addLesson(
+          stageId?.toString() ?? "",
+          lessonName,
+          gameType?.lesson_type_id ?? "",
+          lessonReward,
+          lessonQuestions
+        )
+        .then(() => {
+          fetchData();
+          setOpen(false);
+          setIsSaving(false);
+        })
+        .catch((err) => console.log(err));
+    }
+  }, [
+    gameType,
+    lessonName,
+    lessonQuestions,
+    lessonReward,
+    fetchData,
+    stageId,
+    lesson,
+  ]);
   const handleDeleteLesson = () => {
     if (!confirmDeleteId) return;
     setDeleting(true);

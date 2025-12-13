@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/Button";
-import { Edit, Trash2, Search, Upload, Loader2 } from "lucide-react";
+import { Edit, Trash2, Search, Upload, Loader2, Download } from "lucide-react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -100,6 +100,22 @@ export default function VocabularyPage() {
     } finally {
       setDeleting(false);
     }
+  };
+  const handleDownloadCsv = async () => {
+    vocabularyService
+      .downloadCsv()
+      .then((res) => {
+        const url = window.URL.createObjectURL(res.data);
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "vocabulary.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      })
+      .catch((err) => console.log(err));
   };
 
   const columns: ColumnDef<any>[] = [
@@ -218,7 +234,10 @@ export default function VocabularyPage() {
             className="hidden"
             onChange={handleImportCSV}
           />
-
+          <Button variant="primary" size="sm" onClick={handleDownloadCsv}>
+            <Download size={16} className="me-2" />
+            Download CSV
+          </Button>
           <Button
             variant="primary"
             size="sm"

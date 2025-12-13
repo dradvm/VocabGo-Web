@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { vocabularyService } from "@/services/vocabulary.service";
 import { v4 as uuidv4 } from "uuid";
+import { useWordPosStore } from "@/store/useWordPosStore";
 
 export default function UpdateWordPage() {
   const router = useRouter();
@@ -33,7 +34,6 @@ export default function UpdateWordPage() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [audioPreview, setAudioPreview] = useState<string | null>(null);
   const inputFileRef = useRef<HTMLInputElement | null>(null);
-
   const [wordPosList, setWordPosList] = useState<
     {
       id: string;
@@ -44,6 +44,7 @@ export default function UpdateWordPage() {
       categories: string[];
       imageUrl?: string | null;
       imageFile?: File | null;
+      catTemp?: string;
     }[]
   >([]);
 
@@ -57,7 +58,7 @@ export default function UpdateWordPage() {
     { category_id: string; category_name: string }[]
   >([]);
 
-  // === Fetch danh mục, level, pos ===
+  // === Fetch categories, levels, pos tags ===
   useEffect(() => {
     const fetchOptions = async () => {
       try {
@@ -76,7 +77,7 @@ export default function UpdateWordPage() {
     fetchOptions();
   }, []);
 
-  // === Fetch dữ liệu word hiện tại ===
+  // === Fetch current word data ===
   useEffect(() => {
     if (!wordId) return;
     const fetchWord = async () => {
@@ -111,7 +112,7 @@ export default function UpdateWordPage() {
         if (data.audio_url) setAudioPreview(data.audio_url);
       } catch (err) {
         console.error(err);
-        toast.error("Không thể tải dữ liệu từ cần sửa.");
+        toast.error("Could not load data for editing.");
       } finally {
         setInitialLoading(false);
       }
@@ -185,7 +186,7 @@ export default function UpdateWordPage() {
 
   const handleRemoveWordPos = (index: number) => {
     if (wordPosList.length === 1) {
-      toast.error("Phải có ít nhất 1 từ loại.");
+      toast.error("There must be at least one part of speech.");
       return;
     }
     console.log(wordPosList.filter((_, i) => i !== index));
@@ -209,22 +210,22 @@ export default function UpdateWordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!word.trim() || !meaning.trim()) {
-      toast.error("Vui lòng điền word và meaning");
+      toast.error("Please enter the word and meaning.");
       return;
     }
     if (wordPosList.some((p) => !p.pos_tag || !p.level)) {
-      toast.error("Mỗi từ loại cần có POS và cấp độ.");
+      toast.error("Each part of speech must have a POS and level.");
       return;
     }
 
-    // 2️⃣ Kiểm tra ví dụ (example) có chứa từ chính
+    // 2️⃣ Check that each example (English) contains the main word
     const hasInvalidExample = wordPosList.some((pos) =>
       pos.examples?.some(
         (ex) => !ex.en.toLowerCase().includes(word.trim().toLowerCase())
       )
     );
     if (hasInvalidExample) {
-      toast.error("Mỗi ví dụ tiếng Anh phải chứa từ bạn đang thêm!");
+      toast.error("Each English example must contain the word.");
       return;
     }
 
@@ -233,7 +234,7 @@ export default function UpdateWordPage() {
     );
 
     if (hasInvalidExampleVi) {
-      toast.error("Mỗi ví dụ tiếng Anh phải có nghĩa tiếng Việt!");
+      toast.error("Each English example must have a Vietnamese translation.");
       return;
     }
 
@@ -258,18 +259,18 @@ export default function UpdateWordPage() {
       });
       console.log(formData);
       await vocabularyService.updateWord(wordId?.toString() ?? "", formData);
-      toast.success("Cập nhật từ thành công!");
+      toast.success("Word updated successfully!");
       router.back();
     } catch (err) {
       console.error(err);
-      toast.error("Cập nhật thất bại!");
+      toast.error("Update failed!");
     } finally {
       setLoading(false);
     }
   };
 
   if (initialLoading) {
-    return <div className="p-10 text-gray-600">Đang tải dữ liệu...</div>;
+    return <div className="p-10 text-gray-600">Loading data...</div>;
   }
 
   return (
@@ -280,7 +281,7 @@ export default function UpdateWordPage() {
         onClick={() => router.back()}
         className="mb-6 flex items-center gap-2 border-gray-300 text-gray-600 hover:text-gray-800"
       >
-        <ArrowLeft size={16} /> Quay lại
+        <ArrowLeft size={16} /> Back
       </Button>
 
       <h1 className="text-3xl font-semibold mb-6 text-gray-800">
@@ -318,7 +319,7 @@ export default function UpdateWordPage() {
         {/* --- Audio --- */}
         <div className="flex items-center gap-3">
           <label className="inline-flex items-center gap-2 cursor-pointer text-indigo-600 hover:text-indigo-800">
-            <UploadCloud size={18} /> <span>Chọn file audio mới</span>
+            <UploadCloud size={18} /> <span>Choose new audio file</span>
             <input
               ref={inputFileRef}
               type="file"
@@ -442,9 +443,11 @@ export default function UpdateWordPage() {
                   {/* Category Section */}
                   <div className="flex flex-col gap-3">
                     <Select
-                      onValueChange={(value) =>
-                        handlePosChange(i, "categories", value)
-                      }
+                      value={pos.catTemp}
+                      onValueChange={(value) => {
+                        pos.catTemp = "";
+                        handlePosChange(i, "categories", value);
+                      }}
                     >
                       <SelectTrigger className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <SelectValue placeholder="Select category">
@@ -603,7 +606,7 @@ export default function UpdateWordPage() {
             disabled={loading}
             className="min-w-[120px]"
           >
-            {loading ? "Đang lưu..." : "Cập nhật"}
+            {loading ? "Saving..." : "Update"}
           </Button>
           <Button
             variant="outline"
@@ -612,7 +615,7 @@ export default function UpdateWordPage() {
             onClick={() => router.back()}
             disabled={loading}
           >
-            Huỷ
+            Cancel
           </Button>
         </div>
       </form>

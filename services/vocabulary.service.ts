@@ -3,9 +3,12 @@ import axiosInstance, { createAxios } from "./http";
 const axiosFileInstance = createAxios("", "multipart/form-data");
 const importCSVInstance = createAxios("", "multipart/form-data", 0);
 export const vocabularyService = {
-  getWords: async (page = 1, limit = 10, search = "") =>
-    axiosInstance.get(`/vocabulary/words`, {
-      params: { page, limit, search },
+  getWords: async (page = 1, limit = 10, search = "", categories: string[]) =>
+    axiosInstance.post(`/vocabulary/words/search`, {
+      page,
+      limit,
+      search,
+      categories,
     }),
   getLevels: async () => axiosInstance.get("/vocabulary/levels"),
   getPosTags: async () => axiosInstance.get("/vocabulary/posTags"),
@@ -26,4 +29,8 @@ export const vocabularyService = {
     axiosInstance.post("/vocabulary/wordsPosIds", {
       wordPosIds,
     }),
+  downloadCsv: async () =>
+    axiosInstance.get("/vocabulary/export-csv", { responseType: "blob" }),
+  getWordOverview: async () =>
+    axiosInstance.get("/vocabulary/dashboard/overview"),
 };

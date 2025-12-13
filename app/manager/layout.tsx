@@ -60,7 +60,7 @@ export default function ManagerLayout({
             Dashboard
           </Link>
 
-          {/* <Link
+          <Link
             href="/manager/users"
             className={`flex items-center px-3 py-2 rounded-lg transition ${
               isActive("/manager/users")
@@ -70,7 +70,7 @@ export default function ManagerLayout({
           >
             <Users className="w-5 h-5 mr-3" />
             Users
-          </Link> */}
+          </Link>
 
           <Link
             href="/manager/vocabulary"
@@ -111,7 +111,7 @@ export default function ManagerLayout({
 
         {/* Footer Sidebar */}
         <div className="p-4 border-t border-gray-200">
-          <Link
+          {/* <Link
             href="/manager/settings"
             className={`flex items-center px-3 py-2 rounded-lg transition ${
               isActive("/manager/settings")
@@ -121,7 +121,7 @@ export default function ManagerLayout({
           >
             <Settings className="w-5 h-5 mr-3" />
             Settings
-          </Link>
+          </Link> */}
 
           <button
             onClick={() => {
@@ -137,8 +137,23 @@ export default function ManagerLayout({
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 bg-white p-8 h-screen overflow-y-auto">
-        {children}
+      <main className="flex-1 bg-white flex flex-col h-screen overflow-hidden">
+        {/* Header */}
+        <header className="h-16 flex items-center justify-between px-6 border-b border-gray-200 bg-white">
+          <h1 className="text-xl font-semibold text-gray-800">Manager Panel</h1>
+          <div className="flex items-center space-x-4">
+            <div className="text-gray-600">Xin chào, Admin</div>
+            <div className="w-10 h-10 rounded-full bg-gray-300" />
+          </div>
+        </header>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-8 bg-gray-50">{children}</div>
+
+        {/* Footer */}
+        <footer className="h-12 flex items-center justify-center border-t border-gray-200 bg-white text-sm text-gray-500">
+          © {new Date().getFullYear()} VocabGo – Manager System
+        </footer>
       </main>
     </div>
   );
